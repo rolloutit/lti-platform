@@ -1,0 +1,8 @@
+{
+  "name": "express-platform",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@rolloutit/lti-platform": "workspace:*"
+  }
+}
