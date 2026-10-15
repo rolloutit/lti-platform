@@ -1,8 +1,7 @@
-import { randomBytes } from 'node:crypto'
 import express, { type Request, type RequestHandler } from 'express'
 import session from 'express-session'
 import { toJwks } from '@rolloutit/lti-platform'
-import { ISSUER, PORT } from './config.js'
+import { ISSUER, PORT, SESSION_SECRET, tool } from './config.js'
 import {
   coursesOfUser,
   findCourse,
@@ -38,8 +37,7 @@ app.use(express.urlencoded({ extended: false }))
 app.use(
   session({
     name: SESSION_COOKIE,
-    // Sessions live in memory, so a new secret on every start loses nothing.
-    secret: randomBytes(32).toString('base64url'),
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -155,4 +153,5 @@ app.route('/lti/authorize').get(notImplemented).post(notImplemented)
 app.listen(PORT, (err) => {
   if (err) throw err
   console.log(`Mini-LMS running at ${ISSUER}, signing key kid: ${signingKey.kid}`)
+  console.log(`Tool: ${tool.oidcLoginInitiationUrl} (client_id ${tool.clientId})`)
 })
