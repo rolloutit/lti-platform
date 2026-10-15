@@ -7,9 +7,11 @@ import {
   type JWK,
 } from 'jose'
 
+export type RsaPublicJwk = { kty: 'RSA'; n: string; e: string }
+
 export type SigningKey = {
   privateKey: CryptoKey
-  publicJwk: JWK
+  publicJwk: RsaPublicJwk
   kid: string
   alg: 'RS256'
 }
@@ -35,7 +37,7 @@ export async function createSigningKey(privateJwk: JWK): Promise<SigningKey> {
   const privateKey = await importJWK({ ...privateJwk, kty: 'RSA' as const }, 'RS256')
 
   // Copy only the public members we know about, so a private member can't end up in the JWKS.
-  const publicJwk: JWK = { kty, n, e }
+  const publicJwk: RsaPublicJwk = { kty: 'RSA', n, e }
   const kid = await calculateJwkThumbprint(publicJwk, 'sha256')
 
   return { privateKey, publicJwk, kid, alg: 'RS256' }
@@ -45,4 +47,21 @@ export async function createSigningKey(privateJwk: JWK): Promise<SigningKey> {
 export async function generateSigningKeyJwk(): Promise<JWK> {
   const { privateKey } = await generateKeyPair('RS256', { modulusLength: 2048, extractable: true })
   return exportJWK(privateKey)
+}
+
+/**
+ * Builds the public JWKS served at the platform's JWKS URL. Takes a list so key rotation can be
+ * added later without changing the signature.
+ */
+export function toJwks(keys: SigningKey[]): { keys: JWK[] } {
+  return {
+    keys: keys.map(({ publicJwk: { kty, n, e }, kid, alg }) => ({
+      kty,
+      n,
+      e,
+      kid,
+      alg,
+      use: 'sig',
+    })),
+  }
 }
