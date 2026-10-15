@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import express, { type Request, type RequestHandler } from 'express'
 import session from 'express-session'
+import { toJwks } from '@rolloutit/lti-platform'
 import { ISSUER, PORT } from './config.js'
 import {
   coursesOfUser,
@@ -12,6 +13,7 @@ import {
   linksOfCourse,
 } from './data.js'
 import { escapeHtml, page } from './html.js'
+import { loadSigningKey } from './keys.js'
 
 declare module 'express-session' {
   interface SessionData {
@@ -21,7 +23,16 @@ declare module 'express-session' {
 
 const SESSION_COOKIE = 'mini_lms_sid'
 
+const signingKey = await loadSigningKey()
+const jwks = toJwks([signingKey])
+
 const app = express()
+
+// Security Framework 6.3: the tool fetches this to verify the id_token, picking the key by kid.
+// Registered before the session middleware, it needs no cookie.
+app.get('/.well-known/jwks.json', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=300').json(jwks)
+})
 
 app.use(express.urlencoded({ extended: false }))
 app.use(
@@ -143,5 +154,5 @@ app.route('/lti/authorize').get(notImplemented).post(notImplemented)
 
 app.listen(PORT, (err) => {
   if (err) throw err
-  console.log(`Mini-LMS running at ${ISSUER}`)
+  console.log(`Mini-LMS running at ${ISSUER}, signing key kid: ${signingKey.kid}`)
 })
