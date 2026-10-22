@@ -11,5 +11,8 @@ export type {
   InitiateLoginResult,
   LaunchRecord,
   LaunchStore,
+  User,
+  UserStore,
 } from "./types.js";
 export { createPlatform } from "./login.js";
+export { CONTEXT_ROLES } from "./const/roles.js";

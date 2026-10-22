@@ -28,6 +28,19 @@ export const initiateLogin = async (
     return { type: "error", status: 500 };
   }
 
+  const user = await options.users.findUser(input.currentUserId);
+  if (!user) {
+    return { type: "error", status: 403 };
+  }
+
+  const roles = await options.users.getRoles(
+    input.currentUserId,
+    link.context.id,
+  );
+  if (roles.length === 0) {
+    return { type: "error", status: 403 };
+  }
+
   const messageHint = randomBytes(32).toString("base64url");
   await options.launches.save({
     messageHint,

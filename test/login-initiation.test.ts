@@ -1,10 +1,12 @@
 import { expect, test } from "vitest";
 import {
+  CONTEXT_ROLES,
   createPlatform,
   type LaunchStore,
   type Link,
   type Tool,
   type LaunchRecord,
+  type UserStore,
 } from "../src/index.js";
 
 const tool = {
@@ -18,16 +20,36 @@ const link = {
   linkId: "link-1",
   clientId: "client-1",
   deploymentId: "deployment-1",
+  context: {
+    id: "course-1",
+  },
+};
+
+const user = {
+  userId: "123",
 };
 
 const makePlatform = (
-  overrides: { tool?: Tool; link?: Link; launches?: LaunchStore } = {},
+  overrides: {
+    tool?: Tool;
+    link?: Link;
+    launches?: LaunchStore;
+    users?: UserStore;
+  } = {},
 ) => {
   const platformTool: Tool = overrides.tool ?? tool;
   const platformLink: Link = overrides.link ?? link;
   const platformLaunches: LaunchStore = overrides.launches ?? {
     save: async () => {},
   };
+  const platformUsers: UserStore = overrides.users ?? {
+    findUser: async (userId) => (userId === user.userId ? user : undefined),
+    getRoles: async (userId, contextId) =>
+      userId === user.userId && contextId === link.context.id
+        ? [CONTEXT_ROLES.Learner]
+        : [],
+  };
+
   return createPlatform({
     issuer: "http://localhost:4000",
     registrations: {
@@ -39,6 +61,7 @@ const makePlatform = (
         linkId === platformLink.linkId ? platformLink : undefined,
     },
     launches: platformLaunches,
+    users: platformUsers,
   });
 };
 
@@ -239,4 +262,52 @@ test("if the deployment is not registered for the tool, returns 500", async () =
   });
   expect(result).toStrictEqual({ type: "error", status: 500 });
   expect(saved.length).toBe(0);
+});
+
+test("if the user is not found, returns 403", async () => {
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({
+    launches,
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "999",
+  });
+  expect(result).toStrictEqual({ type: "error", status: 403 });
+  expect(saved.length).toBe(0);
+});
+
+test("if the user has no role in the context of the link, returns 403", async () => {
+  const { launches, saved } = recordingLaunches();
+  const otherCourseLink: Link = {
+    ...link,
+    context: { id: "course-2" },
+  };
+  const platform = makePlatform({ link: otherCourseLink, launches });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "123",
+  });
+  expect(result).toStrictEqual({ type: "error", status: 403 });
+  expect(saved.length).toBe(0);
+});
+
+test("a user with any role in the context of the link is redirected", async () => {
+  const platform = makePlatform({
+    users: {
+      findUser: async (userId) => (userId === user.userId ? user : undefined),
+      getRoles: async (userId, contextId) =>
+        userId === user.userId && contextId === link.context.id
+          ? [CONTEXT_ROLES.Instructor]
+          : [],
+    },
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "123",
+  });
+  expect(result.type).toBe("redirect");
 });

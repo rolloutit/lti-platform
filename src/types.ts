@@ -19,6 +19,9 @@ export type Link = {
   clientId: string;
   deploymentId: string;
   targetLinkUri?: string;
+  context: {
+    id: string;
+  };
 };
 
 export type RegistrationStore = {
@@ -65,4 +68,14 @@ export type PlatformOptions = {
   registrations: RegistrationStore;
   links: LinkStore;
   launches: LaunchStore;
+  users: UserStore;
+};
+
+export type User = {
+  userId: string;
+};
+
+export type UserStore = {
+  findUser: (userId: string) => Promise<User | undefined>;
+  getRoles: (userId: string, contextId: string) => Promise<string[]>;
 };
