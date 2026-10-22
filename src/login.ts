@@ -21,7 +21,11 @@ export const initiateLogin = async (
 
   const tool = await options.registrations.findByClientId(link.clientId);
   if (!tool) {
-    throw new Error("ClientId not found");
+    return { type: "error", status: 500 };
+  }
+
+  if (!tool.deploymentIds.includes(link.deploymentId)) {
+    return { type: "error", status: 500 };
   }
 
   const messageHint = randomBytes(32).toString("base64url");

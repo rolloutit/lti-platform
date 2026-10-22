@@ -204,3 +204,39 @@ test("if the link is not found, returns 404", async () => {
   expect(result).toStrictEqual({ type: "error", status: 404 });
   expect(saved.length).toBe(0);
 });
+
+test("if the tool of the link is not registered, returns 500", async () => {
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({
+    tool: {
+      ...tool,
+      clientId: "client-999",
+    },
+    launches,
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "123",
+  });
+  expect(result).toStrictEqual({ type: "error", status: 500 });
+  expect(saved.length).toBe(0);
+});
+
+test("if the deployment is not registered for the tool, returns 500", async () => {
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({
+    tool: {
+      ...tool,
+      deploymentIds: ["deployment-999"],
+    },
+    launches,
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "123",
+  });
+  expect(result).toStrictEqual({ type: "error", status: 500 });
+  expect(saved.length).toBe(0);
+});
