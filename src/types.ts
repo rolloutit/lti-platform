@@ -47,8 +47,25 @@ export type InitiateLoginResult =
       status: number;
     };
 
+export type AuthorizeInput = {
+  params: Record<string, string | undefined>;
+  currentUserId: string | undefined;
+};
+
+export type AuthorizeResult =
+  | {
+      type: "form_post";
+      action: string;
+      fields: Record<string, string>;
+    }
+  | {
+      type: "error";
+      status: number;
+    };
+
 export type Platform = {
   initiateLogin: (input: InitiateLoginInput) => Promise<InitiateLoginResult>;
+  authorize: (input: AuthorizeInput) => Promise<AuthorizeResult>;
 };
 
 export type LaunchRecord = {

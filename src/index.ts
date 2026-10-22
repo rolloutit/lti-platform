@@ -9,6 +9,8 @@ export type {
   LinkStore,
   InitiateLoginInput,
   InitiateLoginResult,
+  AuthorizeInput,
+  AuthorizeResult,
   LaunchRecord,
   LaunchStore,
   User,
