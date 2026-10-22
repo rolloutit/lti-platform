@@ -42,6 +42,16 @@ const makePlatform = (
   });
 };
 
+const recordingLaunches = () => {
+  const saved: LaunchRecord[] = [];
+  const launches: LaunchStore = {
+    save: async (record) => {
+      saved.push(record);
+    },
+  };
+  return { launches, saved };
+};
+
 test("redirects to the tool login url with the login params", async () => {
   const platform = makePlatform();
 
@@ -66,15 +76,8 @@ test("redirects to the tool login url with the login params", async () => {
 });
 
 test("creates a launch record and saves it to the store", async () => {
-  const launches: LaunchRecord[] = [];
-
-  const platform = makePlatform({
-    launches: {
-      save: async (input) => {
-        launches.push(input);
-      },
-    },
-  });
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({ launches });
 
   const result = await platform.initiateLogin({
     linkId: "link-1",
@@ -88,8 +91,8 @@ test("creates a launch record and saves it to the store", async () => {
 
   expect(url.searchParams.get("lti_message_hint")).not.toBeNull();
 
-  expect(launches.length).toBe(1);
-  expect(launches[0]).toMatchObject({
+  expect(saved.length).toBe(1);
+  expect(saved[0]).toMatchObject({
     messageHint: url.searchParams.get("lti_message_hint"),
     linkId: "link-1",
     userId: "123",
@@ -177,14 +180,8 @@ test("keeps the query params of the tool login url", async () => {
 });
 
 test("if there is no current user, returns 401", async () => {
-  const launches: LaunchRecord[] = [];
-  const platform = makePlatform({
-    launches: {
-      save: async (input) => {
-        launches.push(input);
-      },
-    },
-  });
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({ launches });
 
   const result = await platform.initiateLogin({
     linkId: "link-1",
@@ -192,18 +189,12 @@ test("if there is no current user, returns 401", async () => {
   });
 
   expect(result).toStrictEqual({ type: "error", status: 401 });
-  expect(launches.length).toBe(0);
+  expect(saved.length).toBe(0);
 });
 
 test("if the link is not found, returns 404", async () => {
-  const launches: LaunchRecord[] = [];
-  const platform = makePlatform({
-    launches: {
-      save: async (input) => {
-        launches.push(input);
-      },
-    },
-  });
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({ launches });
 
   const result = await platform.initiateLogin({
     linkId: "link-222",
@@ -211,5 +202,5 @@ test("if the link is not found, returns 404", async () => {
   });
 
   expect(result).toStrictEqual({ type: "error", status: 404 });
-  expect(launches.length).toBe(0);
+  expect(saved.length).toBe(0);
 });
