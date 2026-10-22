@@ -16,19 +16,21 @@
   "engines": {
     "node": ">=24"
   },
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@12.14.0",
   "scripts": {
     "build": "tsc -p .",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
     "eslint": "^10.13.0",
+    "husky": "^9.1.7",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0",
