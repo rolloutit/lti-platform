@@ -7,6 +7,7 @@ import {
   type Tool,
   type LaunchRecord,
   type UserStore,
+  type LinkStore,
 } from "../src/index.js";
 
 const tool = {
@@ -35,6 +36,7 @@ const makePlatform = (
     link?: Link;
     launches?: LaunchStore;
     users?: UserStore;
+    links?: LinkStore;
   } = {},
 ) => {
   const platformTool: Tool = overrides.tool ?? tool;
@@ -49,17 +51,17 @@ const makePlatform = (
         ? [CONTEXT_ROLES.Learner]
         : [],
   };
-
+  const platformLinks: LinkStore = overrides.links ?? {
+    findLink: async (linkId) =>
+      linkId === platformLink.linkId ? platformLink : undefined,
+  };
   return createPlatform({
     issuer: "http://localhost:4000",
     registrations: {
       findByClientId: async (clientId) =>
         clientId === platformTool.clientId ? platformTool : undefined,
     },
-    links: {
-      findLink: async (linkId) =>
-        linkId === platformLink.linkId ? platformLink : undefined,
-    },
+    links: platformLinks,
     launches: platformLaunches,
     users: platformUsers,
   });
@@ -310,4 +312,61 @@ test("a user with any role in the context of the link is redirected", async () =
     currentUserId: "123",
   });
   expect(result.type).toBe("redirect");
+});
+
+test("if saving the launch fails, returns 500", async () => {
+  const platform = makePlatform({
+    launches: {
+      save: async () => {
+        throw new Error("db is down");
+      },
+    },
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "123",
+  });
+  expect(result).toStrictEqual({ type: "error", status: 500 });
+});
+
+test("if the user store throws, returns 500", async () => {
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({
+    launches,
+    users: {
+      findUser: async () => {
+        throw new Error("db is down");
+      },
+      getRoles: async () => {
+        throw new Error("db is down");
+      },
+    },
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "123",
+  });
+  expect(result).toStrictEqual({ type: "error", status: 500 });
+  expect(saved.length).toBe(0);
+});
+
+test("if the link store throws, returns 500", async () => {
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({
+    launches,
+    links: {
+      findLink: async () => {
+        throw new Error("db is down");
+      },
+    },
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: "123",
+  });
+  expect(result).toStrictEqual({ type: "error", status: 500 });
+  expect(saved.length).toBe(0);
 });
