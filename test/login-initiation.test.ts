@@ -130,7 +130,7 @@ test("message hint is different for each login, same linkId, same user id", asyn
   );
 });
 
-test("the target_link_uri ovverrides the tool default", async () => {
+test("the target_link_uri overrides the tool default", async () => {
   const quizLink: Link = {
     ...link,
     linkId: "link-2",
