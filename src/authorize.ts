@@ -25,6 +25,11 @@ export const authorize = async (
     return { type: "error", status: 400 };
   }
 
+  const responseMode = input.params.response_mode;
+  if (!responseMode || responseMode !== "form_post") {
+    return { type: "error", status: 400 };
+  }
+
   const fields: Record<string, string> = {};
   if (input.params.state !== undefined) {
     fields.state = input.params.state;

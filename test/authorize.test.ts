@@ -58,3 +58,20 @@ test.each([
     status: 400,
   });
 });
+
+test.each(["query", "fragment", undefined])(
+  "response_mode %s is answered with a 400 error",
+  async (responseMode) => {
+    const platform = makePlatform();
+
+    const result = await platform.authorize({
+      params: { ...params, response_mode: responseMode },
+      currentUserId: "123",
+    });
+
+    expect(result).toEqual({
+      type: "error",
+      status: 400,
+    });
+  },
+);
