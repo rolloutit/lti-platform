@@ -34,10 +34,15 @@ export type InitiateLoginInput = {
   currentUserId: string | undefined;
 };
 
-export type InitiateLoginResult = {
-  type: "redirect";
-  url: string;
-};
+export type InitiateLoginResult =
+  | {
+      type: "redirect";
+      url: string;
+    }
+  | {
+      type: "error";
+      status: number;
+    };
 
 export type Platform = {
   initiateLogin: (input: InitiateLoginInput) => Promise<InitiateLoginResult>;

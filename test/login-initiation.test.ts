@@ -175,3 +175,41 @@ test("keeps the query params of the tool login url", async () => {
   expect(url.searchParams.get("param")).toBe("123");
   expect(url.searchParams.get("iss")).toBe("http://localhost:4000");
 });
+
+test("if there is no current user, returns 401", async () => {
+  const launches: LaunchRecord[] = [];
+  const platform = makePlatform({
+    launches: {
+      save: async (input) => {
+        launches.push(input);
+      },
+    },
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-1",
+    currentUserId: undefined,
+  });
+
+  expect(result).toStrictEqual({ type: "error", status: 401 });
+  expect(launches.length).toBe(0);
+});
+
+test("if the link is not found, returns 404", async () => {
+  const launches: LaunchRecord[] = [];
+  const platform = makePlatform({
+    launches: {
+      save: async (input) => {
+        launches.push(input);
+      },
+    },
+  });
+
+  const result = await platform.initiateLogin({
+    linkId: "link-222",
+    currentUserId: "123",
+  });
+
+  expect(result).toStrictEqual({ type: "error", status: 404 });
+  expect(launches.length).toBe(0);
+});

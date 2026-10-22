@@ -11,12 +11,12 @@ export const initiateLogin = async (
   options: PlatformOptions,
 ): Promise<InitiateLoginResult> => {
   if (!input.currentUserId) {
-    throw new Error("Missing currentUserId");
+    return { type: "error", status: 401 };
   }
 
   const link = await options.links.findLink(input.linkId);
   if (!link) {
-    throw new Error("Link not found");
+    return { type: "error", status: 404 };
   }
 
   const tool = await options.registrations.findByClientId(link.clientId);
