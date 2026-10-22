@@ -1,5 +1,11 @@
 import { expect, test } from "vitest";
-import { createPlatform, type LaunchRecord } from "../src/index.js";
+import {
+  createPlatform,
+  type LaunchStore,
+  type Link,
+  type Tool,
+  type LaunchRecord,
+} from "../src/index.js";
 
 const tool = {
   clientId: "client-1",
@@ -14,18 +20,30 @@ const link = {
   deploymentId: "deployment-1",
 };
 
-test("redirects to the tool login url with the login params", async () => {
-  const platform = createPlatform({
+const makePlatform = (
+  overrides: { tool?: Tool; link?: Link; launches?: LaunchStore } = {},
+) => {
+  const platformTool: Tool = overrides.tool ?? tool;
+  const platformLink: Link = overrides.link ?? link;
+  const platformLaunches: LaunchStore = overrides.launches ?? {
+    save: async () => {},
+  };
+  return createPlatform({
     issuer: "http://localhost:4000",
     registrations: {
       findByClientId: async (clientId) =>
-        clientId === tool.clientId ? tool : undefined,
+        clientId === platformTool.clientId ? platformTool : undefined,
     },
     links: {
-      findLink: async (linkId) => (linkId === link.linkId ? link : undefined),
+      findLink: async (linkId) =>
+        linkId === platformLink.linkId ? platformLink : undefined,
     },
-    launches: { save: async () => {} },
+    launches: platformLaunches,
   });
+};
+
+test("redirects to the tool login url with the login params", async () => {
+  const platform = makePlatform();
 
   const result = await platform.initiateLogin({
     linkId: "link-1",
@@ -50,15 +68,7 @@ test("redirects to the tool login url with the login params", async () => {
 test("creates a launch record and saves it to the store", async () => {
   const launches: LaunchRecord[] = [];
 
-  const platform = createPlatform({
-    issuer: "http://localhost:4000",
-    registrations: {
-      findByClientId: async (clientId) =>
-        clientId === tool.clientId ? tool : undefined,
-    },
-    links: {
-      findLink: async (linkId) => (linkId === link.linkId ? link : undefined),
-    },
+  const platform = makePlatform({
     launches: {
       save: async (input) => {
         launches.push(input);
@@ -89,19 +99,7 @@ test("creates a launch record and saves it to the store", async () => {
 });
 
 test("message hint is different for each login, same linkId, same user id", async () => {
-  const platform = createPlatform({
-    issuer: "http://localhost:4000",
-    registrations: {
-      findByClientId: async (clientId) =>
-        clientId === tool.clientId ? tool : undefined,
-    },
-    links: {
-      findLink: async (linkId) => (linkId === link.linkId ? link : undefined),
-    },
-    launches: {
-      save: async () => {},
-    },
-  });
+  const platform = makePlatform();
 
   const firstResult = await platform.initiateLogin({
     linkId: "link-1",
@@ -133,24 +131,13 @@ test("message hint is different for each login, same linkId, same user id", asyn
 });
 
 test("the target_link_uri ovverrides the tool default", async () => {
-  const quizLink = {
+  const quizLink: Link = {
     ...link,
     linkId: "link-2",
     targetLinkUri: "https://tool.example.com/lti/quiz",
   };
 
-  const platform = createPlatform({
-    issuer: "http://localhost:4000",
-    registrations: {
-      findByClientId: async (clientId) =>
-        clientId === tool.clientId ? tool : undefined,
-    },
-    links: {
-      findLink: async (linkId) =>
-        linkId === quizLink.linkId ? quizLink : undefined,
-    },
-    launches: { save: async () => {} },
-  });
+  const platform = makePlatform({ link: quizLink });
 
   const result = await platform.initiateLogin({
     linkId: "link-2",
@@ -173,17 +160,7 @@ test("keeps the query params of the tool login url", async () => {
     oidcLoginInitiationUrl: "https://tool.example.com/lti/login?param=123",
   };
 
-  const platform = createPlatform({
-    issuer: "http://localhost:4000",
-    registrations: {
-      findByClientId: async (clientId) =>
-        clientId === toolWithParams.clientId ? toolWithParams : undefined,
-    },
-    links: {
-      findLink: async (linkId) => (linkId === link.linkId ? link : undefined),
-    },
-    launches: { save: async () => {} },
-  });
+  const platform = makePlatform({ tool: toolWithParams });
 
   const result = await platform.initiateLogin({
     linkId: "link-1",
