@@ -20,8 +20,9 @@ export const authorize = async (
   }
 
   const redirectUri = input.params.redirect_uri;
-  if (!redirectUri) {
-    throw new Error("redirect_uri is missing");
+
+  if (!redirectUri || !tool.redirectUris.includes(redirectUri)) {
+    return { type: "error", status: 400 };
   }
 
   const fields: Record<string, string> = {};

@@ -13,6 +13,7 @@ export const tool = {
   deploymentIds: ["deployment-1"],
   oidcLoginInitiationUrl: "https://tool.example.com/lti/login",
   targetLinkUri: "https://tool.example.com/lti/launch",
+  redirectUris: ["https://tool.example.com/lti/launch"],
 };
 
 export const link = {

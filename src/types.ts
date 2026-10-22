@@ -12,6 +12,7 @@ export type Tool = {
   deploymentIds: string[];
   oidcLoginInitiationUrl: string;
   targetLinkUri: string;
+  redirectUris: string[];
 };
 
 export type Link = {

@@ -39,3 +39,22 @@ test("unknown client_id is answered with a 400 error", async () => {
     status: 400,
   });
 });
+
+test.each([
+  "https://tool.example.com/lti/launch/",
+  "https://tool.example.com/lti/launch?x=1",
+  "https://evil.example.com/lti/launch",
+  undefined,
+])("redirect_uri %s is answered with a 400 error", async (redirectUri) => {
+  const platform = makePlatform();
+
+  const result = await platform.authorize({
+    params: { ...params, redirect_uri: redirectUri },
+    currentUserId: "123",
+  });
+
+  expect(result).toEqual({
+    type: "error",
+    status: 400,
+  });
+});
