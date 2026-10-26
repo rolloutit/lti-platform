@@ -217,3 +217,56 @@ test.each([
     });
   },
 );
+
+test("launched more than 5 minutes ago is posted back to the tool as invalid_request", async () => {
+  const platform = makePlatform({
+    now: () => launch.createdAt + 5 * 60 * 1000 + 1,
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "invalid_request", state: "state-1" },
+  });
+});
+
+test("launched exactly 5 minutes ago is still answered with a form post", async () => {
+  const platform = makePlatform({
+    now: () => launch.createdAt + 5 * 60 * 1000,
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { state: "state-1" },
+  });
+});
+
+test("request error does not consume the lti_message_hint", async () => {
+  const consumed: string[] = [];
+  const platform = makePlatform({
+    launches: {
+      save: async () => {},
+      consume: async (messageHint) => {
+        consumed.push(messageHint);
+        return launch;
+      },
+    },
+  });
+
+  const result = await platform.authorize({
+    params: { ...params, scope: "profile" },
+    currentUserId: "123",
+  });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "invalid_scope", state: "state-1" },
+  });
+  expect(consumed).toEqual([]);
+});

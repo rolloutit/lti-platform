@@ -75,6 +75,7 @@ export type LaunchRecord = {
   userId: string;
   clientId: string;
   deploymentId: string;
+  createdAt: number;
 };
 
 export type LaunchStore = {
@@ -88,6 +89,7 @@ export type PlatformOptions = {
   links: LinkStore;
   launches: LaunchStore;
   users: UserStore;
+  now?: () => number;
 };
 
 export type User = {

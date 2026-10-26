@@ -36,6 +36,7 @@ export const launch = {
   userId: "123",
   clientId: "client-1",
   deploymentId: "deployment-1",
+  createdAt: 1234567890,
 };
 
 export const makePlatform = (
@@ -46,6 +47,7 @@ export const makePlatform = (
     users?: UserStore;
     links?: LinkStore;
     registrations?: RegistrationStore;
+    now?: () => number;
   } = {},
 ) => {
   const platformTool: Tool = overrides.tool ?? tool;
@@ -76,5 +78,6 @@ export const makePlatform = (
     launches: platformLaunches,
     users: platformUsers,
     registrations: platformRegistrations,
+    now: overrides.now ?? (() => launch.createdAt),
   });
 };

@@ -5,6 +5,9 @@ import type {
   Tool,
 } from "./types.js";
 
+// 5 minutes
+const LAUNCH_TTL_MS = 5 * 60 * 1000;
+
 export const authorize = async (
   input: AuthorizeInput,
   options: PlatformOptions,
@@ -74,6 +77,10 @@ export const authorize = async (
     launch.clientId !== tool.clientId ||
     !tool.deploymentIds.includes(launch.deploymentId)
   ) {
+    return postError("invalid_request");
+  }
+
+  if (launch.createdAt + LAUNCH_TTL_MS < (options.now?.() ?? Date.now())) {
     return postError("invalid_request");
   }
 

@@ -67,6 +67,16 @@ test("creates a launch record and saves it to the store", async () => {
   });
 });
 
+test("saves the creation time with the launch record", async () => {
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({ launches, now: () => 1_000_000 });
+
+  await platform.initiateLogin({ linkId: "link-1", currentUserId: "123" });
+
+  expect(saved.length).toBe(1);
+  expect(saved[0]).toMatchObject({ createdAt: 1_000_000 });
+});
+
 test("message hint is different for each login, same linkId, same user id", async () => {
   const platform = makePlatform();
 
