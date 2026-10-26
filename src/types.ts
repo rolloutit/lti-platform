@@ -79,6 +79,7 @@ export type LaunchRecord = {
 
 export type LaunchStore = {
   save: (record: LaunchRecord) => Promise<void>;
+  consume: (messageHint: string) => Promise<LaunchRecord | undefined>;
 };
 
 export type PlatformOptions = {

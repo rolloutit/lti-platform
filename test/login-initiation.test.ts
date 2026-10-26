@@ -13,6 +13,7 @@ const recordingLaunches = () => {
     save: async (record) => {
       saved.push(record);
     },
+    consume: async () => undefined,
   };
   return { launches, saved };
 };
@@ -260,6 +261,7 @@ test("if saving the launch fails, returns 500", async () => {
       save: async () => {
         throw new Error("db is down");
       },
+      consume: async () => undefined,
     },
   });
 

@@ -30,6 +30,14 @@ export const user = {
   userId: "123",
 };
 
+export const launch = {
+  messageHint: "message-hint-1",
+  linkId: "link-1",
+  userId: "123",
+  clientId: "client-1",
+  deploymentId: "deployment-1",
+};
+
 export const makePlatform = (
   overrides: {
     tool?: Tool;
@@ -44,6 +52,8 @@ export const makePlatform = (
   const platformLink: Link = overrides.link ?? link;
   const platformLaunches: LaunchStore = overrides.launches ?? {
     save: async () => {},
+    consume: async (messageHint) =>
+      messageHint === launch.messageHint ? launch : undefined,
   };
   const platformUsers: UserStore = overrides.users ?? {
     findUser: async (userId) => (userId === user.userId ? user : undefined),
