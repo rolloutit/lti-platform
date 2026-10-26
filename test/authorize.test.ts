@@ -1,7 +1,7 @@
 import { createLocalJWKSet, jwtVerify } from "jose";
 import { expect, test } from "vitest";
 import { toJwks } from "../src/index.js";
-import { launch, makePlatform, signingKey } from "./helpers/platform.js";
+import { launch, link, makePlatform, signingKey } from "./helpers/platform.js";
 
 const params = {
   scope: "openid",
@@ -16,8 +16,10 @@ const params = {
   state: "state-1",
 };
 
-const verifiedIdToken = async () => {
-  const platform = makePlatform();
+const verifiedIdToken = async (
+  overrides: Parameters<typeof makePlatform>[0] = {},
+) => {
+  const platform = makePlatform(overrides);
 
   const result = await platform.authorize({ params, currentUserId: "123" });
   if (result.type !== "form_post" || !result.fields.id_token) {
@@ -333,4 +335,37 @@ test("id_token is issued at the platforms now and expires 60s later", async () =
   const { payload } = await verifiedIdToken();
 
   expect(payload).toMatchObject({ iat: 1234567, exp: 1234627 });
+});
+
+test("id_token is an LTI 1.3 resource link launch for the saved deployment and target", async () => {
+  const quizLaunch = {
+    ...launch,
+    targetLinkUri: "https://tool.example.com/lti/quiz",
+  };
+  const { payload } = await verifiedIdToken({
+    launches: { save: async () => {}, consume: async () => quizLaunch },
+  });
+
+  // LTI 1.3 Core 5.3: required message claims
+  expect(payload).toMatchObject({
+    "https://purl.imsglobal.org/spec/lti/claim/message_type":
+      "LtiResourceLinkRequest",
+    "https://purl.imsglobal.org/spec/lti/claim/version": "1.3.0",
+    "https://purl.imsglobal.org/spec/lti/claim/deployment_id": "deployment-1",
+    "https://purl.imsglobal.org/spec/lti/claim/target_link_uri":
+      "https://tool.example.com/lti/quiz",
+  });
+});
+
+test("id_token has the resource link and the context of the launched link", async () => {
+  const { payload } = await verifiedIdToken({
+    link: { ...link, context: { id: "course-2" } },
+  });
+
+  expect(payload).toMatchObject({
+    "https://purl.imsglobal.org/spec/lti/claim/resource_link": {
+      id: "link-1",
+    },
+    "https://purl.imsglobal.org/spec/lti/claim/context": { id: "course-2" },
+  });
 });

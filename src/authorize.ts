@@ -1,4 +1,5 @@
 import { SignJWT } from "jose";
+import { LTI_CLAIMS } from "./const/claims.js";
 import type {
   AuthorizeInput,
   AuthorizeResult,
@@ -95,6 +96,11 @@ export const authorize = async (
     return postError("invalid_request");
   }
 
+  const link = await options.links.findLink(launch.linkId);
+  if (!link) {
+    return postError("invalid_request");
+  }
+
   fields.id_token = await new SignJWT({
     iss: options.issuer,
     aud: tool.clientId,
@@ -103,6 +109,16 @@ export const authorize = async (
     sub: launch.userId,
     iat: Math.floor(now / 1000),
     exp: Math.floor(now / 1000) + 60,
+    [LTI_CLAIMS.MessageType]: "LtiResourceLinkRequest",
+    [LTI_CLAIMS.Version]: "1.3.0",
+    [LTI_CLAIMS.DeploymentId]: launch.deploymentId,
+    [LTI_CLAIMS.TargetLinkUri]: launch.targetLinkUri,
+    [LTI_CLAIMS.ResourceLink]: {
+      id: launch.linkId,
+    },
+    [LTI_CLAIMS.Context]: {
+      id: link.context.id,
+    },
   })
     .setProtectedHeader({ alg: "RS256", kid: options.signingKey.kid })
     .sign(options.signingKey.privateKey);
