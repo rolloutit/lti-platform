@@ -54,5 +54,13 @@ export const authorize = async (
     return postError("unsupported_response_type");
   }
 
+  if (
+    input.params.prompt !== "none" ||
+    !input.params.nonce ||
+    !input.params.lti_message_hint
+  ) {
+    return postError("invalid_request");
+  }
+
   return { type: "form_post", action: redirectUri, fields };
 };
