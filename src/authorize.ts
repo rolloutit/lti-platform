@@ -1,6 +1,7 @@
 import type {
   AuthorizeInput,
   AuthorizeResult,
+  LaunchRecord,
   PlatformOptions,
   Tool,
 } from "./types.js";
@@ -70,7 +71,14 @@ export const authorize = async (
     return postError("login_required");
   }
 
-  const launch = await options.launches.consume(input.params.lti_message_hint);
+  let launch: LaunchRecord | undefined;
+  try {
+    launch = await options.launches.consume(input.params.lti_message_hint);
+  } catch (error) {
+    console.error(error);
+    return postError("server_error");
+  }
+
   if (
     !launch ||
     launch.userId !== input.currentUserId ||

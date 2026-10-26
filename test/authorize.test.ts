@@ -270,3 +270,22 @@ test("request error does not consume the lti_message_hint", async () => {
   });
   expect(consumed).toEqual([]);
 });
+
+test("launch store failure is posted back to the tool as server_error", async () => {
+  const platform = makePlatform({
+    launches: {
+      save: async () => {},
+      consume: async () => {
+        throw new Error("db down");
+      },
+    },
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "server_error", state: "state-1" },
+  });
+});
