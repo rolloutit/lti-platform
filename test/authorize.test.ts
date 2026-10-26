@@ -178,3 +178,18 @@ test.each([undefined, "456"])(
     });
   },
 );
+
+test("unknown lti_message_hint is posted back to the tool as invalid_request", async () => {
+  const platform = makePlatform();
+
+  const result = await platform.authorize({
+    params: { ...params, lti_message_hint: "message-hint-999" },
+    currentUserId: "123",
+  });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "invalid_request", state: "state-1" },
+  });
+});

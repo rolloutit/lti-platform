@@ -67,5 +67,10 @@ export const authorize = async (
     return postError("login_required");
   }
 
+  const launch = await options.launches.consume(input.params.lti_message_hint);
+  if (!launch) {
+    return postError("invalid_request");
+  }
+
   return { type: "form_post", action: redirectUri, fields };
 };
