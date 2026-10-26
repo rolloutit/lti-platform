@@ -62,5 +62,9 @@ export const authorize = async (
     return postError("invalid_request");
   }
 
+  if (input.currentUserId !== input.params.login_hint) {
+    return postError("login_required");
+  }
+
   return { type: "form_post", action: redirectUri, fields };
 };

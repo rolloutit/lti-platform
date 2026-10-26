@@ -161,3 +161,18 @@ test.each([
     fields: { error: "invalid_request", state: "state-1" },
   });
 });
+
+test.each([undefined, "456"])(
+  "current user %s is posted back to the tool as login_required",
+  async (currentUserId) => {
+    const platform = makePlatform();
+
+    const result = await platform.authorize({ params, currentUserId });
+
+    expect(result).toEqual({
+      type: "form_post",
+      action: "https://tool.example.com/lti/launch",
+      fields: { error: "login_required", state: "state-1" },
+    });
+  },
+);
