@@ -1,6 +1,7 @@
 import {
   CONTEXT_ROLES,
   createPlatform,
+  type RegistrationStore,
   type LaunchStore,
   type Link,
   type LinkStore,
@@ -36,6 +37,7 @@ export const makePlatform = (
     launches?: LaunchStore;
     users?: UserStore;
     links?: LinkStore;
+    registrations?: RegistrationStore;
   } = {},
 ) => {
   const platformTool: Tool = overrides.tool ?? tool;
@@ -54,14 +56,15 @@ export const makePlatform = (
     findLink: async (linkId) =>
       linkId === platformLink.linkId ? platformLink : undefined,
   };
+  const platformRegistrations: RegistrationStore = overrides.registrations ?? {
+    findByClientId: async (clientId) =>
+      clientId === platformTool.clientId ? platformTool : undefined,
+  };
   return createPlatform({
     issuer: "http://localhost:4000",
-    registrations: {
-      findByClientId: async (clientId) =>
-        clientId === platformTool.clientId ? platformTool : undefined,
-    },
     links: platformLinks,
     launches: platformLaunches,
     users: platformUsers,
+    registrations: platformRegistrations,
   });
 };

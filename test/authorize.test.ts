@@ -75,3 +75,23 @@ test.each(["query", "fragment", undefined])(
     });
   },
 );
+
+test("registration store failure is answered with a 500 error", async () => {
+  const platform = makePlatform({
+    registrations: {
+      findByClientId: async () => {
+        throw new Error("db down");
+      },
+    },
+  });
+
+  const result = await platform.authorize({
+    params,
+    currentUserId: "123",
+  });
+
+  expect(result).toEqual({
+    type: "error",
+    status: 500,
+  });
+});

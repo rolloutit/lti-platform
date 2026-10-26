@@ -2,6 +2,7 @@ import type {
   AuthorizeInput,
   AuthorizeResult,
   PlatformOptions,
+  Tool,
 } from "./types.js";
 
 export const authorize = async (
@@ -12,15 +13,19 @@ export const authorize = async (
     return { type: "error", status: 400 };
   }
 
-  const tool = await options.registrations.findByClientId(
-    input.params.client_id,
-  );
-  if (!tool) {
-    return { type: "error", status: 400 };
+  let tool: Tool | undefined;
+
+  try {
+    tool = await options.registrations.findByClientId(input.params.client_id);
+    if (!tool) {
+      return { type: "error", status: 400 };
+    }
+  } catch (error) {
+    console.error(error);
+    return { type: "error", status: 500 };
   }
 
   const redirectUri = input.params.redirect_uri;
-
   if (!redirectUri || !tool.redirectUris.includes(redirectUri)) {
     return { type: "error", status: 400 };
   }
