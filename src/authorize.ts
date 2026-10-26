@@ -40,5 +40,13 @@ export const authorize = async (
     fields.state = input.params.state;
   }
 
+  if (input.params.scope !== "openid") {
+    return {
+      type: "form_post",
+      action: redirectUri,
+      fields: { error: "invalid_scope", ...fields },
+    };
+  }
+
   return { type: "form_post", action: redirectUri, fields };
 };

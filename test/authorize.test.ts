@@ -95,3 +95,21 @@ test("registration store failure is answered with a 500 error", async () => {
     status: 500,
   });
 });
+
+test.each(["profile", "openid profile", "", undefined])(
+  "scope %s is posted back to the tool as invalid_scope",
+  async (scope) => {
+    const platform = makePlatform();
+
+    const result = await platform.authorize({
+      params: { ...params, scope },
+      currentUserId: "123",
+    });
+
+    expect(result).toEqual({
+      type: "form_post",
+      action: "https://tool.example.com/lti/launch",
+      fields: { error: "invalid_scope", state: "state-1" },
+    });
+  },
+);
