@@ -1,5 +1,7 @@
+import { createLocalJWKSet, jwtVerify } from "jose";
 import { expect, test } from "vitest";
-import { launch, makePlatform } from "./helpers/platform.js";
+import { toJwks } from "../src/index.js";
+import { launch, makePlatform, signingKey } from "./helpers/platform.js";
 
 const params = {
   scope: "openid",
@@ -14,6 +16,21 @@ const params = {
   state: "state-1",
 };
 
+const verifiedIdToken = async () => {
+  const platform = makePlatform();
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+  if (result.type !== "form_post" || !result.fields.id_token) {
+    throw new Error("no id_token");
+  }
+
+  return jwtVerify(
+    result.fields.id_token,
+    createLocalJWKSet(toJwks([signingKey])),
+    { currentDate: new Date(launch.createdAt) },
+  );
+};
+
 test("valid request is answered with a form post to the redirect_uri", async () => {
   const platform = makePlatform();
 
@@ -22,7 +39,7 @@ test("valid request is answered with a form post to the redirect_uri", async () 
   expect(result).toEqual({
     type: "form_post",
     action: "https://tool.example.com/lti/launch",
-    fields: { state: "state-1" },
+    fields: { state: "state-1", id_token: expect.any(String) },
   });
 });
 
@@ -242,7 +259,7 @@ test("launched exactly 5 minutes ago is still answered with a form post", async 
   expect(result).toEqual({
     type: "form_post",
     action: "https://tool.example.com/lti/launch",
-    fields: { state: "state-1" },
+    fields: { state: "state-1", id_token: expect.any(String) },
   });
 });
 
@@ -288,4 +305,32 @@ test("launch store failure is posted back to the tool as server_error", async ()
     action: "https://tool.example.com/lti/launch",
     fields: { error: "server_error", state: "state-1" },
   });
+});
+
+test("id_token is signed with the platform key", async () => {
+  const { protectedHeader } = await verifiedIdToken();
+
+  expect(protectedHeader).toMatchObject({
+    alg: "RS256",
+    kid: signingKey.kid,
+  });
+});
+
+test("id_token identifies the platform, the tool, the user and the request", async () => {
+  const { payload } = await verifiedIdToken();
+
+  expect(payload).toMatchObject({
+    iss: "http://localhost:4000",
+    aud: "client-1",
+    azp: "client-1",
+    sub: "123",
+    nonce: "nonce-1",
+  });
+});
+
+test("id_token is issued at the platforms now and expires 60s later", async () => {
+  // makePlatform sets launch.createdAt = 1234567890 ms
+  const { payload } = await verifiedIdToken();
+
+  expect(payload).toMatchObject({ iat: 1234567, exp: 1234627 });
 });

@@ -1,3 +1,4 @@
+import { SignJWT } from "jose";
 import type {
   AuthorizeInput,
   AuthorizeResult,
@@ -13,6 +14,8 @@ export const authorize = async (
   input: AuthorizeInput,
   options: PlatformOptions,
 ): Promise<AuthorizeResult> => {
+  const now = options.now?.() ?? Date.now();
+
   if (!input.params.client_id) {
     return { type: "error", status: 400 };
   }
@@ -88,9 +91,21 @@ export const authorize = async (
     return postError("invalid_request");
   }
 
-  if (launch.createdAt + LAUNCH_TTL_MS < (options.now?.() ?? Date.now())) {
+  if (launch.createdAt + LAUNCH_TTL_MS < now) {
     return postError("invalid_request");
   }
+
+  fields.id_token = await new SignJWT({
+    iss: options.issuer,
+    aud: tool.clientId,
+    azp: tool.clientId,
+    nonce: input.params.nonce,
+    sub: launch.userId,
+    iat: Math.floor(now / 1000),
+    exp: Math.floor(now / 1000) + 60,
+  })
+    .setProtectedHeader({ alg: "RS256", kid: options.signingKey.kid })
+    .sign(options.signingKey.privateKey);
 
   return { type: "form_post", action: redirectUri, fields };
 };
