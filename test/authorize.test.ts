@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { makePlatform } from "./helpers/platform.js";
+import { launch, makePlatform } from "./helpers/platform.js";
 
 const params = {
   scope: "openid",
@@ -193,3 +193,27 @@ test("unknown lti_message_hint is posted back to the tool as invalid_request", a
     fields: { error: "invalid_request", state: "state-1" },
   });
 });
+
+test.each([
+  { clientId: "client-2" },
+  { userId: "456" },
+  { deploymentId: "deployment-2" },
+])(
+  "launch record with %o is posted back to the tool as invalid_request",
+  async (override) => {
+    const platform = makePlatform({
+      launches: {
+        save: async () => {},
+        consume: async () => ({ ...launch, ...override }),
+      },
+    });
+
+    const result = await platform.authorize({ params, currentUserId: "123" });
+
+    expect(result).toEqual({
+      type: "form_post",
+      action: "https://tool.example.com/lti/launch",
+      fields: { error: "invalid_request", state: "state-1" },
+    });
+  },
+);

@@ -68,7 +68,12 @@ export const authorize = async (
   }
 
   const launch = await options.launches.consume(input.params.lti_message_hint);
-  if (!launch) {
+  if (
+    !launch ||
+    launch.userId !== input.currentUserId ||
+    launch.clientId !== tool.clientId ||
+    !tool.deploymentIds.includes(launch.deploymentId)
+  ) {
     return postError("invalid_request");
   }
 
