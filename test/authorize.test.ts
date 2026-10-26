@@ -136,7 +136,7 @@ test.each(["code", "id_token token", "", undefined])(
   },
 );
 
-// prompt=none, nonce and lti_message_hint are required, 1EdTech Security Framework 5.1.1.2:
+// prompt=none, nonce, login_hint and lti_message_hint are required, 1EdTech Security Framework 5.1.1.2:
 // https://www.imsglobal.org/spec/security/v1p0/#step-2-authentication-request
 // Error code from RFC 6749 4.2.2.1:
 // https://www.rfc-editor.org/rfc/rfc6749#section-4.2.2.1
@@ -145,6 +145,8 @@ test.each([
   { prompt: undefined },
   { nonce: undefined },
   { nonce: "" },
+  { login_hint: undefined },
+  { login_hint: "" },
   { lti_message_hint: undefined },
   { lti_message_hint: "" },
 ])("%o is posted back to the tool as invalid_request", async (override) => {

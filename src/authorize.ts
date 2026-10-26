@@ -57,7 +57,8 @@ export const authorize = async (
   if (
     input.params.prompt !== "none" ||
     !input.params.nonce ||
-    !input.params.lti_message_hint
+    !input.params.lti_message_hint ||
+    !input.params.login_hint
   ) {
     return postError("invalid_request");
   }
