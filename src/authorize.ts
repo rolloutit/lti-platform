@@ -40,20 +40,18 @@ export const authorize = async (
     fields.state = input.params.state;
   }
 
+  const postError = (error: string): AuthorizeResult => ({
+    type: "form_post",
+    action: redirectUri,
+    fields: { error, ...fields },
+  });
+
   if (input.params.scope !== "openid") {
-    return {
-      type: "form_post",
-      action: redirectUri,
-      fields: { error: "invalid_scope", ...fields },
-    };
+    return postError("invalid_scope");
   }
 
   if (input.params.response_type !== "id_token") {
-    return {
-      type: "form_post",
-      action: redirectUri,
-      fields: { error: "unsupported_response_type", ...fields },
-    };
+    return postError("unsupported_response_type");
   }
 
   return { type: "form_post", action: redirectUri, fields };
