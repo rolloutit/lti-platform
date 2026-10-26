@@ -24,7 +24,8 @@
     "test:watch": "vitest",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
