@@ -48,5 +48,13 @@ export const authorize = async (
     };
   }
 
+  if (input.params.response_type !== "id_token") {
+    return {
+      type: "form_post",
+      action: redirectUri,
+      fields: { error: "unsupported_response_type", ...fields },
+    };
+  }
+
   return { type: "form_post", action: redirectUri, fields };
 };

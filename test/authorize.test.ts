@@ -113,3 +113,25 @@ test.each(["profile", "openid profile", "", undefined])(
     });
   },
 );
+
+// response_type must be id_token, 1EdTech Security Framework 5.1.1.2:
+// https://www.imsglobal.org/spec/security/v1p0/#step-2-authentication-request
+// Error code from RFC 6749 4.2.2.1:
+// https://www.rfc-editor.org/rfc/rfc6749#section-4.2.2.1
+test.each(["code", "id_token token", "", undefined])(
+  "response_type %s is posted back to the tool as unsupported_response_type",
+  async (responseType) => {
+    const platform = makePlatform();
+
+    const result = await platform.authorize({
+      params: { ...params, response_type: responseType },
+      currentUserId: "123",
+    });
+
+    expect(result).toEqual({
+      type: "form_post",
+      action: "https://tool.example.com/lti/launch",
+      fields: { error: "unsupported_response_type", state: "state-1" },
+    });
+  },
+);
