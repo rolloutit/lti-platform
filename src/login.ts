@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { authorize } from "./authorize.js";
 import type {
   InitiateLoginInput,
   InitiateLoginResult,
@@ -49,6 +50,7 @@ export const initiateLogin = async (
       deploymentId: link.deploymentId,
       userId: input.currentUserId,
       linkId: link.linkId,
+      createdAt: options.now?.() ?? Date.now(),
     });
 
     const url = new URL(tool.oidcLoginInitiationUrl);
@@ -71,5 +73,6 @@ export const initiateLogin = async (
 export const createPlatform = (options: PlatformOptions): Platform => {
   return {
     initiateLogin: (input) => initiateLogin(input, options),
+    authorize: (input) => authorize(input, options),
   };
 };

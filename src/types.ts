@@ -12,6 +12,7 @@ export type Tool = {
   deploymentIds: string[];
   oidcLoginInitiationUrl: string;
   targetLinkUri: string;
+  redirectUris: string[];
 };
 
 export type Link = {
@@ -47,8 +48,25 @@ export type InitiateLoginResult =
       status: number;
     };
 
+export type AuthorizeInput = {
+  params: Record<string, string | undefined>;
+  currentUserId: string | undefined;
+};
+
+export type AuthorizeResult =
+  | {
+      type: "form_post";
+      action: string;
+      fields: Record<string, string>;
+    }
+  | {
+      type: "error";
+      status: number;
+    };
+
 export type Platform = {
   initiateLogin: (input: InitiateLoginInput) => Promise<InitiateLoginResult>;
+  authorize: (input: AuthorizeInput) => Promise<AuthorizeResult>;
 };
 
 export type LaunchRecord = {
@@ -57,10 +75,12 @@ export type LaunchRecord = {
   userId: string;
   clientId: string;
   deploymentId: string;
+  createdAt: number;
 };
 
 export type LaunchStore = {
   save: (record: LaunchRecord) => Promise<void>;
+  consume: (messageHint: string) => Promise<LaunchRecord | undefined>;
 };
 
 export type PlatformOptions = {
@@ -69,6 +89,7 @@ export type PlatformOptions = {
   links: LinkStore;
   launches: LaunchStore;
   users: UserStore;
+  now?: () => number;
 };
 
 export type User = {

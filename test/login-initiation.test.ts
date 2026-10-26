@@ -1,71 +1,11 @@
 import { expect, test } from "vitest";
 import {
   CONTEXT_ROLES,
-  createPlatform,
   type LaunchStore,
-  type Link,
-  type Tool,
   type LaunchRecord,
-  type UserStore,
-  type LinkStore,
+  type Link,
 } from "../src/index.js";
-
-const tool = {
-  clientId: "client-1",
-  deploymentIds: ["deployment-1"],
-  oidcLoginInitiationUrl: "https://tool.example.com/lti/login",
-  targetLinkUri: "https://tool.example.com/lti/launch",
-};
-
-const link = {
-  linkId: "link-1",
-  clientId: "client-1",
-  deploymentId: "deployment-1",
-  context: {
-    id: "course-1",
-  },
-};
-
-const user = {
-  userId: "123",
-};
-
-const makePlatform = (
-  overrides: {
-    tool?: Tool;
-    link?: Link;
-    launches?: LaunchStore;
-    users?: UserStore;
-    links?: LinkStore;
-  } = {},
-) => {
-  const platformTool: Tool = overrides.tool ?? tool;
-  const platformLink: Link = overrides.link ?? link;
-  const platformLaunches: LaunchStore = overrides.launches ?? {
-    save: async () => {},
-  };
-  const platformUsers: UserStore = overrides.users ?? {
-    findUser: async (userId) => (userId === user.userId ? user : undefined),
-    getRoles: async (userId, contextId) =>
-      userId === user.userId && contextId === link.context.id
-        ? [CONTEXT_ROLES.Learner]
-        : [],
-  };
-  const platformLinks: LinkStore = overrides.links ?? {
-    findLink: async (linkId) =>
-      linkId === platformLink.linkId ? platformLink : undefined,
-  };
-  return createPlatform({
-    issuer: "http://localhost:4000",
-    registrations: {
-      findByClientId: async (clientId) =>
-        clientId === platformTool.clientId ? platformTool : undefined,
-    },
-    links: platformLinks,
-    launches: platformLaunches,
-    users: platformUsers,
-  });
-};
+import { link, makePlatform, tool, user } from "./helpers/platform.js";
 
 const recordingLaunches = () => {
   const saved: LaunchRecord[] = [];
@@ -73,6 +13,7 @@ const recordingLaunches = () => {
     save: async (record) => {
       saved.push(record);
     },
+    consume: async () => undefined,
   };
   return { launches, saved };
 };
@@ -124,6 +65,16 @@ test("creates a launch record and saves it to the store", async () => {
     clientId: "client-1",
     deploymentId: "deployment-1",
   });
+});
+
+test("saves the creation time with the launch record", async () => {
+  const { launches, saved } = recordingLaunches();
+  const platform = makePlatform({ launches, now: () => 1_000_000 });
+
+  await platform.initiateLogin({ linkId: "link-1", currentUserId: "123" });
+
+  expect(saved.length).toBe(1);
+  expect(saved[0]).toMatchObject({ createdAt: 1_000_000 });
 });
 
 test("message hint is different for each login, same linkId, same user id", async () => {
@@ -320,6 +271,7 @@ test("if saving the launch fails, returns 500", async () => {
       save: async () => {
         throw new Error("db is down");
       },
+      consume: async () => undefined,
     },
   });
 
