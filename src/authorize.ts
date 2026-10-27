@@ -4,6 +4,7 @@ import type {
   AuthorizeInput,
   AuthorizeResult,
   LaunchRecord,
+  Link,
   PlatformOptions,
   Tool,
 } from "./types.js";
@@ -96,12 +97,24 @@ export const authorize = async (
     return postError("invalid_request");
   }
 
-  const link = await options.links.findLink(launch.linkId);
+  let link: Link | undefined;
+  try {
+    link = await options.links.findLink(launch.linkId);
+  } catch (error) {
+    console.error(error);
+    return postError("server_error");
+  }
   if (!link) {
     return postError("invalid_request");
   }
 
-  const roles = await options.users.getRoles(launch.userId, link.context.id);
+  let roles: string[] | undefined;
+  try {
+    roles = await options.users.getRoles(launch.userId, link.context.id);
+  } catch (error) {
+    console.error(error);
+    return postError("server_error");
+  }
 
   fields.id_token = await new SignJWT({
     iss: options.issuer,

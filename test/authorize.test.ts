@@ -397,3 +397,54 @@ test("id_token has the roles of the user in the context of the launched link", a
   });
   expect(getRolesCalls).toContainEqual(["123", "course-2"]);
 });
+
+test("link deleted since the login is rejected as invalid_request", async () => {
+  const platform = makePlatform({
+    links: { findLink: async () => undefined },
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "invalid_request", state: "state-1" },
+  });
+});
+
+test("link store failure is posted back to the tool as server_error", async () => {
+  const platform = makePlatform({
+    links: {
+      findLink: async () => {
+        throw new Error("db down");
+      },
+    },
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "server_error", state: "state-1" },
+  });
+});
+
+test("user store failure is posted back to the tool as server_error", async () => {
+  const platform = makePlatform({
+    users: {
+      findUser: async () => user,
+      getRoles: async () => {
+        throw new Error("db down");
+      },
+    },
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "server_error", state: "state-1" },
+  });
+});
