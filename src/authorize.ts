@@ -101,6 +101,8 @@ export const authorize = async (
     return postError("invalid_request");
   }
 
+  const roles = await options.users.getRoles(launch.userId, link.context.id);
+
   fields.id_token = await new SignJWT({
     iss: options.issuer,
     aud: tool.clientId,
@@ -119,6 +121,7 @@ export const authorize = async (
     [LTI_CLAIMS.Context]: {
       id: link.context.id,
     },
+    [LTI_CLAIMS.Roles]: roles,
   })
     .setProtectedHeader({ alg: "RS256", kid: options.signingKey.kid })
     .sign(options.signingKey.privateKey);

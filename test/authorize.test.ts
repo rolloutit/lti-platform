@@ -1,7 +1,13 @@
 import { createLocalJWKSet, jwtVerify } from "jose";
 import { expect, test } from "vitest";
-import { toJwks } from "../src/index.js";
-import { launch, link, makePlatform, signingKey } from "./helpers/platform.js";
+import { CONTEXT_ROLES, toJwks } from "../src/index.js";
+import {
+  launch,
+  link,
+  makePlatform,
+  signingKey,
+  user,
+} from "./helpers/platform.js";
 
 const params = {
   scope: "openid",
@@ -368,4 +374,26 @@ test("id_token has the resource link and the context of the launched link", asyn
     },
     "https://purl.imsglobal.org/spec/lti/claim/context": { id: "course-2" },
   });
+});
+
+test("id_token has the roles of the user in the context of the launched link", async () => {
+  const getRolesCalls: [string, string][] = [];
+  const { payload } = await verifiedIdToken({
+    link: { ...link, context: { id: "course-2" } },
+    users: {
+      findUser: async () => user,
+      getRoles: async (userId, contextId) => {
+        getRolesCalls.push([userId, contextId]);
+        return [CONTEXT_ROLES.Instructor];
+      },
+    },
+  });
+
+  // LTI 1.3 Core 5.3.7: roles is required (an empty array is allowed)
+  expect(payload).toMatchObject({
+    "https://purl.imsglobal.org/spec/lti/claim/roles": [
+      CONTEXT_ROLES.Instructor,
+    ],
+  });
+  expect(getRolesCalls).toContainEqual(["123", "course-2"]);
 });

@@ -9,4 +9,5 @@ export const LTI_CLAIMS = {
   TargetLinkUri: `${LTI}target_link_uri`,
   ResourceLink: `${LTI}resource_link`,
   Context: `${LTI}context`,
+  Roles: `${LTI}roles`,
 } as const;
