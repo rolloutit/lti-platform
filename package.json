@@ -25,7 +25,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "prepare": "husky",
-    "check": "pnpm typecheck && pnpm lint && pnpm test"
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "example": "pnpm build && pnpm --filter express-platform dev"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
