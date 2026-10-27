@@ -1,6 +1,8 @@
 import {
   CONTEXT_ROLES,
   createPlatform,
+  createSigningKey,
+  generateSigningKeyJwk,
   type RegistrationStore,
   type LaunchStore,
   type Link,
@@ -36,8 +38,11 @@ export const launch = {
   userId: "123",
   clientId: "client-1",
   deploymentId: "deployment-1",
+  targetLinkUri: "https://tool.example.com/lti/launch",
   createdAt: 1234567890,
 };
+
+export const signingKey = await createSigningKey(await generateSigningKeyJwk());
 
 export const makePlatform = (
   overrides: {
@@ -74,6 +79,7 @@ export const makePlatform = (
   };
   return createPlatform({
     issuer: "http://localhost:4000",
+    signingKey,
     links: platformLinks,
     launches: platformLaunches,
     users: platformUsers,

@@ -322,3 +322,19 @@ test("if the link store throws, returns 500", async () => {
   expect(result).toStrictEqual({ type: "error", status: 500 });
   expect(saved.length).toBe(0);
 });
+
+test("saves the target_link_uri sent to the tool with the launch record", async () => {
+  const { launches, saved } = recordingLaunches();
+  const quizLink: Link = {
+    ...link,
+    targetLinkUri: "https://tool.example.com/lti/quiz",
+  };
+  const platform = makePlatform({ launches, link: quizLink });
+
+  await platform.initiateLogin({ linkId: "link-1", currentUserId: "123" });
+
+  expect(saved.length).toBe(1);
+  expect(saved[0]).toMatchObject({
+    targetLinkUri: "https://tool.example.com/lti/quiz",
+  });
+});

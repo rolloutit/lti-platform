@@ -1,5 +1,13 @@
+import { createLocalJWKSet, jwtVerify } from "jose";
 import { expect, test } from "vitest";
-import { launch, makePlatform } from "./helpers/platform.js";
+import { CONTEXT_ROLES, toJwks } from "../src/index.js";
+import {
+  launch,
+  link,
+  makePlatform,
+  signingKey,
+  user,
+} from "./helpers/platform.js";
 
 const params = {
   scope: "openid",
@@ -14,6 +22,23 @@ const params = {
   state: "state-1",
 };
 
+const verifiedIdToken = async (
+  overrides: Parameters<typeof makePlatform>[0] = {},
+) => {
+  const platform = makePlatform(overrides);
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+  if (result.type !== "form_post" || !result.fields.id_token) {
+    throw new Error("no id_token");
+  }
+
+  return jwtVerify(
+    result.fields.id_token,
+    createLocalJWKSet(toJwks([signingKey])),
+    { currentDate: new Date(launch.createdAt) },
+  );
+};
+
 test("valid request is answered with a form post to the redirect_uri", async () => {
   const platform = makePlatform();
 
@@ -22,7 +47,7 @@ test("valid request is answered with a form post to the redirect_uri", async () 
   expect(result).toEqual({
     type: "form_post",
     action: "https://tool.example.com/lti/launch",
-    fields: { state: "state-1" },
+    fields: { state: "state-1", id_token: expect.any(String) },
   });
 });
 
@@ -242,7 +267,7 @@ test("launched exactly 5 minutes ago is still answered with a form post", async 
   expect(result).toEqual({
     type: "form_post",
     action: "https://tool.example.com/lti/launch",
-    fields: { state: "state-1" },
+    fields: { state: "state-1", id_token: expect.any(String) },
   });
 });
 
@@ -276,6 +301,140 @@ test("launch store failure is posted back to the tool as server_error", async ()
     launches: {
       save: async () => {},
       consume: async () => {
+        throw new Error("db down");
+      },
+    },
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "server_error", state: "state-1" },
+  });
+});
+
+test("id_token is signed with the platform key", async () => {
+  const { protectedHeader } = await verifiedIdToken();
+
+  expect(protectedHeader).toMatchObject({
+    alg: "RS256",
+    kid: signingKey.kid,
+  });
+});
+
+test("id_token identifies the platform, the tool, the user and the request", async () => {
+  const { payload } = await verifiedIdToken();
+
+  expect(payload).toMatchObject({
+    iss: "http://localhost:4000",
+    aud: "client-1",
+    azp: "client-1",
+    sub: "123",
+    nonce: "nonce-1",
+  });
+});
+
+test("id_token is issued at the platforms now and expires 60s later", async () => {
+  // makePlatform sets launch.createdAt = 1234567890 ms
+  const { payload } = await verifiedIdToken();
+
+  expect(payload).toMatchObject({ iat: 1234567, exp: 1234627 });
+});
+
+test("id_token is an LTI 1.3 resource link launch for the saved deployment and target", async () => {
+  const quizLaunch = {
+    ...launch,
+    targetLinkUri: "https://tool.example.com/lti/quiz",
+  };
+  const { payload } = await verifiedIdToken({
+    launches: { save: async () => {}, consume: async () => quizLaunch },
+  });
+
+  // LTI 1.3 Core 5.3: required message claims
+  expect(payload).toMatchObject({
+    "https://purl.imsglobal.org/spec/lti/claim/message_type":
+      "LtiResourceLinkRequest",
+    "https://purl.imsglobal.org/spec/lti/claim/version": "1.3.0",
+    "https://purl.imsglobal.org/spec/lti/claim/deployment_id": "deployment-1",
+    "https://purl.imsglobal.org/spec/lti/claim/target_link_uri":
+      "https://tool.example.com/lti/quiz",
+  });
+});
+
+test("id_token has the resource link and the context of the launched link", async () => {
+  const { payload } = await verifiedIdToken({
+    link: { ...link, context: { id: "course-2" } },
+  });
+
+  expect(payload).toMatchObject({
+    "https://purl.imsglobal.org/spec/lti/claim/resource_link": {
+      id: "link-1",
+    },
+    "https://purl.imsglobal.org/spec/lti/claim/context": { id: "course-2" },
+  });
+});
+
+test("id_token has the roles of the user in the context of the launched link", async () => {
+  const getRolesCalls: [string, string][] = [];
+  const { payload } = await verifiedIdToken({
+    link: { ...link, context: { id: "course-2" } },
+    users: {
+      findUser: async () => user,
+      getRoles: async (userId, contextId) => {
+        getRolesCalls.push([userId, contextId]);
+        return [CONTEXT_ROLES.Instructor];
+      },
+    },
+  });
+
+  // LTI 1.3 Core 5.3.7: roles is required (an empty array is allowed)
+  expect(payload).toMatchObject({
+    "https://purl.imsglobal.org/spec/lti/claim/roles": [
+      CONTEXT_ROLES.Instructor,
+    ],
+  });
+  expect(getRolesCalls).toContainEqual(["123", "course-2"]);
+});
+
+test("link deleted since the login is rejected as invalid_request", async () => {
+  const platform = makePlatform({
+    links: { findLink: async () => undefined },
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "invalid_request", state: "state-1" },
+  });
+});
+
+test("link store failure is posted back to the tool as server_error", async () => {
+  const platform = makePlatform({
+    links: {
+      findLink: async () => {
+        throw new Error("db down");
+      },
+    },
+  });
+
+  const result = await platform.authorize({ params, currentUserId: "123" });
+
+  expect(result).toEqual({
+    type: "form_post",
+    action: "https://tool.example.com/lti/launch",
+    fields: { error: "server_error", state: "state-1" },
+  });
+});
+
+test("user store failure is posted back to the tool as server_error", async () => {
+  const platform = makePlatform({
+    users: {
+      findUser: async () => user,
+      getRoles: async () => {
         throw new Error("db down");
       },
     },

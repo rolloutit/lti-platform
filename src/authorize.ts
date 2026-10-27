@@ -1,7 +1,10 @@
+import { SignJWT } from "jose";
+import { LTI_CLAIMS } from "./const/claims.js";
 import type {
   AuthorizeInput,
   AuthorizeResult,
   LaunchRecord,
+  Link,
   PlatformOptions,
   Tool,
 } from "./types.js";
@@ -13,6 +16,8 @@ export const authorize = async (
   input: AuthorizeInput,
   options: PlatformOptions,
 ): Promise<AuthorizeResult> => {
+  const now = options.now?.() ?? Date.now();
+
   if (!input.params.client_id) {
     return { type: "error", status: 400 };
   }
@@ -88,9 +93,51 @@ export const authorize = async (
     return postError("invalid_request");
   }
 
-  if (launch.createdAt + LAUNCH_TTL_MS < (options.now?.() ?? Date.now())) {
+  if (launch.createdAt + LAUNCH_TTL_MS < now) {
     return postError("invalid_request");
   }
+
+  let link: Link | undefined;
+  try {
+    link = await options.links.findLink(launch.linkId);
+  } catch (error) {
+    console.error(error);
+    return postError("server_error");
+  }
+  if (!link) {
+    return postError("invalid_request");
+  }
+
+  let roles: string[] | undefined;
+  try {
+    roles = await options.users.getRoles(launch.userId, link.context.id);
+  } catch (error) {
+    console.error(error);
+    return postError("server_error");
+  }
+
+  fields.id_token = await new SignJWT({
+    iss: options.issuer,
+    aud: tool.clientId,
+    azp: tool.clientId,
+    nonce: input.params.nonce,
+    sub: launch.userId,
+    iat: Math.floor(now / 1000),
+    exp: Math.floor(now / 1000) + 60,
+    [LTI_CLAIMS.MessageType]: "LtiResourceLinkRequest",
+    [LTI_CLAIMS.Version]: "1.3.0",
+    [LTI_CLAIMS.DeploymentId]: launch.deploymentId,
+    [LTI_CLAIMS.TargetLinkUri]: launch.targetLinkUri,
+    [LTI_CLAIMS.ResourceLink]: {
+      id: launch.linkId,
+    },
+    [LTI_CLAIMS.Context]: {
+      id: link.context.id,
+    },
+    [LTI_CLAIMS.Roles]: roles,
+  })
+    .setProtectedHeader({ alg: "RS256", kid: options.signingKey.kid })
+    .sign(options.signingKey.privateKey);
 
   return { type: "form_post", action: redirectUri, fields };
 };

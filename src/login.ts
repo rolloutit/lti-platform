@@ -51,6 +51,7 @@ export const initiateLogin = async (
       userId: input.currentUserId,
       linkId: link.linkId,
       createdAt: options.now?.() ?? Date.now(),
+      targetLinkUri: link.targetLinkUri ?? tool.targetLinkUri,
     });
 
     const url = new URL(tool.oidcLoginInitiationUrl);
