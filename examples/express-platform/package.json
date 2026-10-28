@@ -2,7 +2,19 @@
   "name": "express-platform",
   "private": true,
   "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p ."
+  },
   "dependencies": {
-    "@rolloutit/lti-platform": "workspace:*"
+    "@rolloutit/lti-platform": "workspace:*",
+    "express": "^5.3.0",
+    "express-session": "^1.19.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/express-session": "^1.19.0",
+    "tsx": "^4.23.15"
   }
 }

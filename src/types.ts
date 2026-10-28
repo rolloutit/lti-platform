@@ -102,3 +102,8 @@ export type UserStore = {
   findUser: (userId: string) => Promise<User | undefined>;
   getRoles: (userId: string, contextId: string) => Promise<string[]>;
 };
+
+export type AutoSubmitForm = {
+  action: string;
+  fields: Record<string, string>;
+};
